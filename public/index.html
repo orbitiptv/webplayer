@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbit TV</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#08090D">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+
+<!-- iOS "Add to Home Screen" support (Safari ignores manifest.json) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Orbit TV">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ PROFILE SCREEN (entry point) ============ -->
+<div id="profileScreen" class="screen">
+  <div class="profile-header">
+    <div class="brand">
+      <img src="logo-full.png" alt="Orbit TV" class="brand-logo-full">
+    </div>
+    <div class="profile-header-actions">
+      <button class="btn btn-ghost" id="installAppBtn" hidden>Install app</button>
+      <button class="icon-btn" id="langBtnProfiles" title="Language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></button>
+      <button class="btn btn-primary" id="addProfileBtn" data-i18n="add_profile_button">Add profile</button>
+    </div>
+  </div>
+  <div id="profileEmpty" class="profile-empty" data-i18n="no_profiles_text" hidden>No saved profiles yet. Add your first Xtream Codes account.</div>
+  <div id="profileScreenError" class="profile-screen-error" hidden></div>
+  <div id="profileList" class="profile-list"></div>
+</div>
+
+<!-- ============ ADD/EDIT PROFILE MODAL ============ -->
+<div id="profileFormModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <h2 id="profileFormTitle" data-i18n="add_profile_button">Add profile</h2>
+    <p class="modal-sub" data-i18n="login_subtitle">Log in with your Xtream Codes account</p>
+    <label data-i18n="hint_profile_name">Profile name</label>
+    <input type="text" id="fName" autocomplete="off">
+    <label data-i18n="hint_server">Server address</label>
+    <input type="text" id="fServer" placeholder="http://server.com:8080" autocomplete="off">
+    <label data-i18n="hint_username">Username</label>
+    <input type="text" id="fUser" autocomplete="off">
+    <label data-i18n="hint_password">Password</label>
+    <input type="password" id="fPass" autocomplete="off">
+    <div id="formError" class="form-error" hidden></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="formCancelBtn" data-i18n="cancel">Cancel</button>
+      <button class="btn btn-primary" id="formSaveBtn" data-i18n="save_profile_button">Save profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div class="app" id="app" hidden>
+
+  <div class="rail">
+    <img src="logo-mark.png" alt="Orbit TV" class="rail-logo-mark">
+    <div class="rail-nav">
+      <button class="rail-item" id="navLive" title="Live TV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </button>
+      <button class="rail-item" id="navMovies" title="Movies">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>
+      </button>
+      <button class="rail-item" id="navSeries" title="Series">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="6" width="16" height="11" rx="2"/><path d="M9 21h6M9 3l3 3 3-3"/></svg>
+      </button>
+    </div>
+    <div class="rail-bottom">
+      <button class="rail-item" id="langBtnApp" title="Language">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>
+      </button>
+      <button class="rail-item" id="logoutBtn" title="Log out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="catcol">
+    <div class="catcol-title" data-i18n="categories_label">Categories</div>
+    <div class="cat-list" id="catList"></div>
+  </div>
+
+  <div class="main">
+
+    <div class="topbar">
+      <div class="wordmark"><img src="logo-mark.png" alt="Orbit TV" class="topbar-logo-mark"></div>
+      <input class="searchbox" id="searchBox" placeholder="Search…">
+      <div class="topbar-right">
+        <div class="clock"><div class="time" id="clockTime">--:--</div><div class="date" id="clockDate">-</div></div>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+
+      <!-- ---- LIVE TV VIEW ---- -->
+      <div id="liveView">
+        <div class="hero">
+          <div class="preview" id="previewCard">
+            <video id="miniVideo" muted playsinline></video>
+            <div class="badge-live"><span class="dot"></span><span data-i18n="live_badge">LIVE</span></div>
+            <button class="expand-btn" id="expandBtn" title="Open fullscreen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+            </button>
+          </div>
+          <div class="nowinfo">
+            <div class="chip-row">
+              <span class="chip cat" id="npCat" data-i18n="nav_live">Live TV</span>
+              <span class="chip" id="npCh" data-i18n="select_channel">Select a channel</span>
+            </div>
+            <h1 id="npTitle">-</h1>
+            <div class="sub" id="npTime">-</div>
+            <p class="desc" id="npDesc"></p>
+            <div class="progress-wrap">
+              <div class="progress-track"><div class="progress-fill" id="npProgress" style="width:0%"></div></div>
+              <div class="progress-labels"><span id="npElapsed">-</span><span id="npRemain">-</span></div>
+              <div class="up-next"><span data-i18n="up_next">Next</span>: <b id="npNext">-</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-label" data-i18n="channels_label">Channels</div>
+        <div class="chrail" id="chRail"></div>
+
+        <div class="epg-wrap">
+          <div class="epg-header">
+            <div class="title" data-i18n="tv_guide_label">TV Guide</div>
+            <button id="epgNowBtn" class="epg-now-btn" data-i18n="now_button">Now ↦</button>
+          </div>
+          <div class="epg-scroll" id="epgScroll">
+            <div class="epg-grid" id="epgGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- MOVIES / SERIES POSTER GRID ---- -->
+      <div id="gridView" hidden>
+        <div class="section-label" id="gridSectionLabel">Movies</div>
+        <div class="poster-grid" id="posterGrid"></div>
+      </div>
+
+      <div id="statusText" class="status-text" hidden></div>
+
+    </div>
+
+    <div class="ctrlbar" id="miniCtrlBar">
+      <div class="ctrl-track-info">
+        <div class="t1" id="barTitle">-</div>
+        <div class="t2" id="barSub">-</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="vol-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 8a5 5 0 010 8"/></svg>
+        <input type="range" id="volSlider" min="0" max="100" value="80">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ SERIES DETAIL OVERLAY ============ -->
+<div id="seriesDetailOverlay" class="modal-overlay" hidden>
+  <div class="series-detail-card">
+    <button class="back-btn" id="seriesBackBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+    <div class="series-header">
+      <img id="seriesCover" class="series-cover" alt="">
+      <div class="series-meta">
+        <h2 id="seriesTitle">-</h2>
+        <div class="series-genre" id="seriesGenre"></div>
+        <p class="series-plot" id="seriesPlot"></p>
+      </div>
+    </div>
+    <div id="episodeList" class="episode-list"></div>
+  </div>
+</div>
+
+<!-- ============ FULL PLAYER MODAL ============ -->
+<div id="playerModal" class="player-modal" hidden>
+  <video id="mainVideo" playsinline></video>
+
+  <button class="player-back-btn" id="playerBackBtn" title="Back to menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+  <div class="player-title" id="playerTitle"></div>
+
+  <div class="player-topbar">
+    <button class="player-icon-btn" id="speedBtn" title="Playback speed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-3"/></svg>
+    </button>
+    <button class="player-icon-btn" id="audioTrackBtn" title="Audio track">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 8a5 5 0 010 8"/></svg>
+    </button>
+    <button class="player-icon-btn" id="subtitleBtn" title="Subtitles">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10.5a2 1.7 0 100 3M14 10.5a2 1.7 0 100 3"/></svg>
+    </button>
+    <button class="player-icon-btn" id="closePlayerBtn" title="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="player-controls">
+    <button class="player-ctrl-btn" id="seekBackBtn" title="Back 10s">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+    </button>
+    <button class="player-ctrl-btn big" id="playPauseBtn" title="Play/Pause">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" id="ppIcon"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="player-ctrl-btn" id="seekFwdBtn" title="Forward 10s">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+    </button>
+    <span class="time-readout" id="playerElapsed">00:00</span>
+    <div class="progress-track player-seek" id="playerSeekTrack"><div class="progress-fill" id="playerSeekFill" style="width:0%"></div></div>
+    <span class="time-readout" id="playerDuration">00:00</span>
+    <button class="player-ctrl-btn" id="fullscreenBtn" title="Fullscreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ============ MENU POPUPS (language / track pickers) ============ -->
+<div id="menuOverlay" class="menu-overlay" hidden>
+  <div class="menu-card" id="menuCard"></div>
+</div>
+
+<script src="hls.min.js"></script>
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
