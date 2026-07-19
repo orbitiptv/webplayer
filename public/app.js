@@ -388,7 +388,7 @@
     document.getElementById('barSub').textContent = t('nav_live');
 
     playMini(ch);
-    document.getElementById('expandBtn').onclick = () => openFullPlayer(liveUrl(ch.stream_id), ch.name, true);
+    document.getElementById('expandBtn').onclick = () => openFullPlayer(proxiedStreamUrl(liveUrl(ch.stream_id)), ch.name, true);
 
     updateCurrentEpgFor(ch);
   }
