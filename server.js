@@ -84,11 +84,25 @@ app.get('/stream', async (req, res) => {
     if (req.headers.range) upstreamHeaders.range = req.headers.range;
 
     const upstream = await fetch(target, { headers: upstreamHeaders, signal: AbortSignal.timeout(20000) });
+
+    if (!upstream.ok) {
+      const bodyText = await upstream.text().catch(() => '');
+      console.error(`[stream] upstream returned HTTP ${upstream.status} for ${target} :: ${bodyText.slice(0, 300)}`);
+      res.status(upstream.status >= 400 && upstream.status < 600 ? upstream.status : 502);
+      res.set('Access-Control-Allow-Origin', '*');
+      return res.send(`Upstream server returned HTTP ${upstream.status}. This usually means the provider is blocking or rejecting this connection (some providers block hosting/datacenter IP addresses).`);
+    }
+
     const contentType = upstream.headers.get('content-type') || '';
     const isManifest = /mpegurl|m3u8/i.test(contentType) || target.toLowerCase().includes('.m3u8');
 
     if (isManifest) {
       const text = await upstream.text();
+      if (!text.includes('#EXTM3U') && !text.includes('#EXT-X')) {
+        console.error(`[stream] expected an m3u8 manifest from ${target} but got something else :: ${text.slice(0, 300)}`);
+        res.set('Access-Control-Allow-Origin', '*');
+        return res.status(502).send('The upstream server did not return a valid HLS playlist.');
+      }
       const rewritten = text.split('\n').map(line => {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) return line;
@@ -118,6 +132,7 @@ app.get('/stream', async (req, res) => {
     }
     res.end();
   } catch (err) {
+    console.error(`[stream] error proxying ${target}: ${err.message}`);
     if (!res.headersSent) res.status(502).send('Error proxying the stream: ' + err.message);
   }
 });
