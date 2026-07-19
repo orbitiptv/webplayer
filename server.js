@@ -80,7 +80,7 @@ app.get('/stream', async (req, res) => {
   }
 
   try {
-    const upstreamHeaders = {};
+    const upstreamHeaders = { 'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20' };
     if (req.headers.range) upstreamHeaders.range = req.headers.range;
 
     const upstream = await fetch(target, { headers: upstreamHeaders, signal: AbortSignal.timeout(20000) });
